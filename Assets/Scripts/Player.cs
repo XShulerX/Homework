@@ -12,13 +12,18 @@ namespace Asteroids
         [SerializeField] private float _force;
         private Camera _camera;
         private Ship _ship;
+        private float _horizontal;
+        private float _vertical;
 
         private void Start()
         {
             _camera = Camera.main;
-            var moveTransform = new AccelerationMove(transform, _speed, _acceleration);
+            var rigidbody = GetComponent<Rigidbody2D>();
+            var moveTransform = new AccelerationMove(rigidbody, _speed, _acceleration);
             var rotation = new RotationShip(transform);
-            _ship = new Ship(moveTransform, rotation);
+            var fire = new FireBullet(_barrel, _force);
+            var damagable = new Damagable(_hp);
+            _ship = new Ship(moveTransform, rotation, fire, damagable);
         }
 
         private void Update()
@@ -26,9 +31,8 @@ namespace Asteroids
             var direction = Input.mousePosition - _camera.WorldToScreenPoint(transform.position);
             _ship.Rotation(direction);
 
-            _ship.Move(Input.GetAxis("Horizontal"),
-                Input.GetAxis("Vertical"),
-                Time.deltaTime);
+            _horizontal = Input.GetAxis("Horizontal");
+            _vertical = Input.GetAxis("Vertical");
 
             if (Input.GetKeyDown(KeyCode.LeftShift))
             {
@@ -42,21 +46,18 @@ namespace Asteroids
 
             if (Input.GetButtonDown("Fire1"))
             {
-                var temAmmunition = Instantiate(_bullet, _barrel.position, _barrel.rotation);
-                temAmmunition.AddForce(_barrel.up * _force);
+                _ship.Fire(_bullet);
             }
+        }
+
+        private void FixedUpdate()
+        {
+            _ship.Move(_horizontal, _vertical);
         }
 
         private void OnCollisionEnter2D(Collision2D other)
         {
-            if (_hp <= 0)
-            {
-                Destroy(gameObject);
-            }
-            else
-            {
-                _hp--;
-            }
+            _ship.TakeDamage();
         }
     }
 }
